@@ -114,12 +114,12 @@
         </div>
     </header>
 
-    <main class="max-w-7xl mx-auto px-4 py-6 lg:flex lg:gap-6">
+    <main class="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
         <!-- Overlay mobile -->
         <div id="configOverlay" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden"></div>
 
         <!-- Config Panel -->
-        <aside id="configPanel" class="fixed lg:relative inset-y-0 left-0 z-50 w-80 lg:w-72 xl:w-80 bg-white lg:bg-transparent shadow-2xl lg:shadow-none transform -translate-x-full lg:translate-x-0 transition-transform duration-300 overflow-y-auto scrollbar-thin">
+        <aside id="configPanel" class="fixed lg:static inset-y-0 left-0 z-50 w-80 lg:w-auto bg-white lg:bg-transparent shadow-2xl lg:shadow-none transform -translate-x-full lg:translate-x-0 transition-transform duration-300 overflow-y-auto lg:overflow-visible scrollbar-thin">
             <div class="lg:sticky lg:top-24 space-y-4 p-5 lg:p-0">
                 <!-- Mobile header -->
                 <div class="flex items-center justify-between lg:hidden mb-4">
@@ -132,7 +132,7 @@
                 </div>
 
                 <!-- Dimensions du mur -->
-                <div class="bg-white rounded-2xl p-5 shadow-sm border border-wood-100">
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-wood-100 !mt-0">
                     <h3 class="text-sm font-semibold text-wood-900 mb-4 flex items-center gap-2">
                         <span class="w-8 h-8 rounded-lg bg-wood-100 flex items-center justify-center">📐</span>
                         Dimensions du mur
@@ -266,7 +266,7 @@
         </aside>
 
         <!-- Main content -->
-        <div class="flex-1 space-y-6">
+        <div class="space-y-6">
             <!-- Canvas Preview -->
             <div class="bg-white rounded-2xl p-4 md:p-6 shadow-sm border border-wood-100">
                 <div class="flex items-center justify-between mb-4">

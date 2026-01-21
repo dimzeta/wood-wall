@@ -1,0 +1,12 @@
+{
+  "name": "wall-wood",
+  "version": "1.0.0",
+  "description": "Simulateur de décoration murale en lames de bois",
+  "main": "app.js",
+  "scripts": {
+    "deploy": "vercel --prod"
+  },
+  "keywords": ["wood", "wall", "designer", "simulator"],
+  "author": "Dimitri Bocquet",
+  "license": "MIT"
+}

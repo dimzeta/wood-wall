@@ -548,8 +548,42 @@ async function exportPDF() {
     y += 5;
     pdf.text(`• ${slats.length * 2} chevilles murales`, margin, y);
 
-    // Sauvegarde
-    pdf.save(`wood-wall-design-${Date.now()}.pdf`);
+    // Générer le blob PDF
+    const pdfBlob = pdf.output('blob');
+    const fileName = `wood-wall-design-${Date.now()}.pdf`;
+
+    // Vérifier si Web Share API est disponible (iOS Safari, Android)
+    if (navigator.canShare && navigator.canShare({ files: [new File([pdfBlob], fileName, { type: 'application/pdf' })] })) {
+        try {
+            const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+            await navigator.share({
+                files: [file],
+                title: 'Wood Wall Design',
+                text: 'Mon plan de mur en lames de bois'
+            });
+        } catch (err) {
+            // L'utilisateur a annulé le partage, ce n'est pas une erreur
+            if (err.name !== 'AbortError') {
+                console.error('Erreur partage:', err);
+                fallbackDownload(pdfBlob, fileName);
+            }
+        }
+    } else {
+        // Fallback pour desktop et navigateurs sans Web Share
+        fallbackDownload(pdfBlob, fileName);
+    }
+}
+
+// Fonction de téléchargement fallback
+function fallbackDownload(blob, fileName) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 100);
 }
 
 // ==========================================

@@ -39,10 +39,14 @@ const elements = {
     historyBadge: document.getElementById('historyBadge'),
     canvasDimensions: document.getElementById('canvasDimensions'),
     wallColor: document.getElementById('wallColor'),
-    wallColorHex: document.getElementById('wallColorHex')
+    wallColorHex: document.getElementById('wallColorHex'),
+    miniPreview: document.getElementById('miniPreview'),
+    miniCanvas: document.getElementById('miniCanvas'),
+    miniDimensions: document.getElementById('miniDimensions')
 };
 
 const ctx = elements.canvas.getContext('2d');
+const miniCtx = elements.miniCanvas.getContext('2d');
 
 // ==========================================
 // Configuration
@@ -58,7 +62,8 @@ function getConfig() {
         slat: {
             width: parseFloat(document.getElementById('slatWidth').value),
             thickness: parseFloat(document.getElementById('slatThickness').value),
-            maxLength: parseFloat(document.getElementById('slatMaxLength').value)
+            maxLength: parseFloat(document.getElementById('slatMaxLength').value),
+            verticalStart: document.getElementById('verticalStart').value
         },
         layout: {
             gap: parseFloat(document.getElementById('slatGap').value),
@@ -82,6 +87,7 @@ function setConfig(config) {
     document.getElementById('slatWidth').value = config.slat.width;
     document.getElementById('slatThickness').value = config.slat.thickness;
     document.getElementById('slatMaxLength').value = config.slat.maxLength;
+    document.getElementById('verticalStart').value = config.slat.verticalStart || 'centered';
     document.getElementById('slatGap').value = config.layout.gap;
     document.getElementById('pattern').value = config.layout.pattern;
     document.getElementById('minLength').value = config.layout.minLength;
@@ -121,11 +127,48 @@ function generateSlats(config) {
     const { wall, slat, layout } = config;
 
     const totalSlatHeight = slat.width + layout.gap;
-    const numSlats = Math.floor((wall.height - layout.gap) / totalSlatHeight);
-    const usedHeight = numSlats * totalSlatHeight - layout.gap;
-    const verticalMargin = (wall.height - usedHeight) / 2;
     const maxSlatLength = (wall.width * layout.maxLengthPercent) / 100;
     const tolerance = layout.tolerance || 0;
+    const verticalStart = slat.verticalStart || 'centered';
+
+    let numSlats, verticalMargin;
+
+    // Calcul du nombre de lames et de la marge verticale selon l'option de départ
+    switch (verticalStart) {
+        case 'top-flush':
+            // En haut sans marge : première lame collée en haut
+            numSlats = Math.floor((wall.height + layout.gap) / totalSlatHeight);
+            verticalMargin = 0;
+            break;
+
+        case 'top-margin':
+            // En haut avec marge : marge en haut égale à l'écart
+            numSlats = Math.floor((wall.height - layout.gap) / totalSlatHeight);
+            verticalMargin = layout.gap;
+            break;
+
+        case 'bottom-margin':
+            // En bas avec marge : marge en bas égale à l'écart
+            numSlats = Math.floor((wall.height - layout.gap) / totalSlatHeight);
+            const usedHeightBottom = numSlats * totalSlatHeight - layout.gap;
+            verticalMargin = wall.height - usedHeightBottom - layout.gap;
+            break;
+
+        case 'bottom-flush':
+            // En bas sans marge : dernière lame collée en bas
+            numSlats = Math.floor((wall.height + layout.gap) / totalSlatHeight);
+            const usedHeightFlush = numSlats * totalSlatHeight - layout.gap;
+            verticalMargin = wall.height - usedHeightFlush;
+            break;
+
+        case 'centered':
+        default:
+            // Centré : comportement original avec marges égales
+            numSlats = Math.floor((wall.height - layout.gap) / totalSlatHeight);
+            const usedHeightCentered = numSlats * totalSlatHeight - layout.gap;
+            verticalMargin = (wall.height - usedHeightCentered) / 2;
+            break;
+    }
 
     for (let i = 0; i < numSlats; i++) {
         const y = verticalMargin + i * totalSlatHeight;
@@ -308,6 +351,9 @@ function drawWall(config, slats) {
 
     // MAJ dimensions affichées
     elements.canvasDimensions.textContent = `${wall.width} × ${wall.height} cm`;
+
+    // MAJ mini-aperçu
+    updateMiniPreview();
 }
 
 // ==========================================
@@ -808,6 +854,38 @@ function generate() {
     displayMaterialsSummary(config, slats);
 }
 
+// Redessiner uniquement l'aperçu (sans recalculer les lames)
+function redrawOnly() {
+    if (state.slats.length === 0) {
+        generate();
+        return;
+    }
+    const config = getConfig();
+    state.config = config;
+    drawWall(config, state.slats);
+}
+
+// Mettre à jour le mini-aperçu
+function updateMiniPreview() {
+    if (!elements.canvas.width || !elements.canvas.height) return;
+
+    // Calculer la taille du mini-canvas (max 160px de large)
+    const maxWidth = 160;
+    const ratio = elements.canvas.height / elements.canvas.width;
+    const miniWidth = maxWidth;
+    const miniHeight = miniWidth * ratio;
+
+    elements.miniCanvas.width = miniWidth;
+    elements.miniCanvas.height = miniHeight;
+
+    // Copier le canvas principal dans le mini-canvas
+    miniCtx.drawImage(elements.canvas, 0, 0, miniWidth, miniHeight);
+
+    // Mettre à jour les dimensions affichées
+    const config = getConfig();
+    elements.miniDimensions.textContent = `${config.wall.width} × ${config.wall.height} cm`;
+}
+
 // ==========================================
 // Event Listeners
 // ==========================================
@@ -841,6 +919,34 @@ elements.historyBtn.addEventListener('click', openHistoryModal);
 elements.closeHistory.addEventListener('click', closeHistoryModal);
 elements.historyOverlay.addEventListener('click', closeHistoryModal);
 
+// Mini-aperçu : Intersection Observer pour détecter quand le canvas principal sort de l'écran
+const canvasObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            // Canvas visible : cacher le mini-aperçu
+            elements.miniPreview.classList.add('opacity-0');
+            setTimeout(() => {
+                if (elements.miniPreview.classList.contains('opacity-0')) {
+                    elements.miniPreview.classList.add('hidden');
+                }
+            }, 300);
+        } else {
+            // Canvas hors écran : afficher le mini-aperçu
+            elements.miniPreview.classList.remove('hidden');
+            requestAnimationFrame(() => {
+                elements.miniPreview.classList.remove('opacity-0');
+            });
+        }
+    });
+}, { threshold: 0.1 });
+
+canvasObserver.observe(elements.canvas);
+
+// Clic sur le mini-aperçu pour revenir à l'aperçu principal
+elements.miniPreview.addEventListener('click', () => {
+    elements.canvas.scrollIntoView({ behavior: 'smooth', block: 'center' });
+});
+
 // Sync couleur mur
 elements.wallColor.addEventListener('input', (e) => {
     elements.wallColorHex.value = e.target.value;
@@ -860,10 +966,19 @@ toleranceSlider.addEventListener('input', (e) => {
 });
 toleranceSlider.addEventListener('change', generate);
 
-// Mise à jour en temps réel
-document.querySelectorAll('input:not(#tolerance), select').forEach(input => {
+// Paramètres d'apparence (ne recalculent pas les lames)
+const appearanceInputs = ['wallColor', 'wallColorHex', 'woodColor'];
+
+// Paramètres de calcul (régénèrent tout)
+const calculationInputs = document.querySelectorAll('input:not(#tolerance):not(#wallColor):not(#wallColorHex), select:not(#woodColor)');
+calculationInputs.forEach(input => {
     input.addEventListener('change', generate);
 });
+
+// Les paramètres d'apparence ne font que redessiner
+document.getElementById('woodColor').addEventListener('change', redrawOnly);
+elements.wallColor.addEventListener('change', redrawOnly);
+elements.wallColorHex.addEventListener('change', redrawOnly);
 
 // ==========================================
 // Initialisation

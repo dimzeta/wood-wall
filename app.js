@@ -1,33 +1,53 @@
-// Configuration et état global
+// ==========================================
+// Wood Wall Designer - Application
+// ==========================================
+
+// État global
 const state = {
     slats: [],
-    config: {}
+    config: {},
+    bins: [],
+    history: []
 };
 
 // Couleurs de bois
 const woodColors = {
-    walnut: { base: '#4a3728', grain: '#3d2d20', highlight: '#5c4535' },
-    oak: { base: '#c4a574', grain: '#b08f5a', highlight: '#d4b584' },
-    pine: { base: '#deb887', grain: '#c9a066', highlight: '#e8c89a' },
-    ebony: { base: '#2d2926', grain: '#1a1816', highlight: '#3d3936' },
-    cherry: { base: '#8b4513', grain: '#722d0a', highlight: '#a0522d' }
+    walnut: { base: '#4a3728', grain: '#3d2d20', highlight: '#5c4535', name: 'Noyer foncé' },
+    oak: { base: '#c4a574', grain: '#b08f5a', highlight: '#d4b584', name: 'Chêne clair' },
+    pine: { base: '#deb887', grain: '#c9a066', highlight: '#e8c89a', name: 'Pin naturel' },
+    ebony: { base: '#2d2926', grain: '#1a1816', highlight: '#3d3936', name: 'Ébène' },
+    cherry: { base: '#8b4513', grain: '#722d0a', highlight: '#a0522d', name: 'Cerisier' }
 };
 
 // Éléments DOM
 const elements = {
     canvas: document.getElementById('wallCanvas'),
     generateBtn: document.getElementById('generateBtn'),
-    randomizeBtn: document.getElementById('randomizeBtn'),
+    saveBtn: document.getElementById('saveBtn'),
+    exportPdfBtn: document.getElementById('exportPdfBtn'),
+    exportPdfBtnMobile: document.getElementById('exportPdfBtnMobile'),
     materialsSummary: document.getElementById('materialsSummary'),
     menuToggle: document.getElementById('menuToggle'),
     configPanel: document.getElementById('configPanel'),
     closePanel: document.getElementById('closePanel'),
-    configOverlay: document.getElementById('configOverlay')
+    configOverlay: document.getElementById('configOverlay'),
+    historyBtn: document.getElementById('historyBtn'),
+    historyModal: document.getElementById('historyModal'),
+    historyOverlay: document.getElementById('historyOverlay'),
+    closeHistory: document.getElementById('closeHistory'),
+    historyList: document.getElementById('historyList'),
+    historyBadge: document.getElementById('historyBadge'),
+    canvasDimensions: document.getElementById('canvasDimensions'),
+    wallColor: document.getElementById('wallColor'),
+    wallColorHex: document.getElementById('wallColorHex')
 };
 
 const ctx = elements.canvas.getContext('2d');
 
-// Récupérer la configuration depuis les inputs
+// ==========================================
+// Configuration
+// ==========================================
+
 function getConfig() {
     return {
         wall: {
@@ -53,19 +73,34 @@ function getConfig() {
     };
 }
 
-// Générer les lames selon le motif choisi
+function setConfig(config) {
+    document.getElementById('wallWidth').value = config.wall.width;
+    document.getElementById('wallHeight').value = config.wall.height;
+    document.getElementById('wallColor').value = config.wall.color;
+    document.getElementById('wallColorHex').value = config.wall.color;
+    document.getElementById('slatWidth').value = config.slat.width;
+    document.getElementById('slatThickness').value = config.slat.thickness;
+    document.getElementById('slatMaxLength').value = config.slat.maxLength;
+    document.getElementById('slatGap').value = config.layout.gap;
+    document.getElementById('pattern').value = config.layout.pattern;
+    document.getElementById('minLength').value = config.layout.minLength;
+    document.getElementById('maxLengthPercent').value = config.layout.maxLengthPercent;
+    document.getElementById('startSide').value = config.layout.startSide;
+    document.getElementById('woodColor').value = config.appearance.woodColor;
+}
+
+// ==========================================
+// Génération des lames
+// ==========================================
+
 function generateSlats(config) {
     const slats = [];
     const { wall, slat, layout } = config;
 
-    // Calculer le nombre de lames possibles
     const totalSlatHeight = slat.width + layout.gap;
     const numSlats = Math.floor((wall.height - layout.gap) / totalSlatHeight);
-
-    // Marge verticale pour centrer
     const usedHeight = numSlats * totalSlatHeight - layout.gap;
     const verticalMargin = (wall.height - usedHeight) / 2;
-
     const maxSlatLength = (wall.width * layout.maxLengthPercent) / 100;
 
     for (let i = 0; i < numSlats; i++) {
@@ -74,31 +109,26 @@ function generateSlats(config) {
 
         switch (layout.pattern) {
             case 'staggered':
-                // Motif décalé comme sur l'image - crée un effet de vague
                 const wavePosition = Math.sin((i / numSlats) * Math.PI * 2) * 0.3 + 0.5;
                 const variation = (Math.random() - 0.5) * 0.2;
                 length = layout.minLength + (maxSlatLength - layout.minLength) * (wavePosition + variation);
                 length = Math.max(layout.minLength, Math.min(maxSlatLength, length));
-
                 if (layout.startSide === 'left') {
                     x = 0;
                 } else if (layout.startSide === 'right') {
                     x = wall.width - length;
                 } else {
-                    // Alterner gauche/droite
                     x = i % 2 === 0 ? 0 : wall.width - length;
                 }
                 break;
 
             case 'centered':
-                // Symétrique autour du centre
                 const centerProgress = Math.abs((i - numSlats / 2) / (numSlats / 2));
                 length = maxSlatLength - (maxSlatLength - layout.minLength) * centerProgress;
                 x = (wall.width - length) / 2;
                 break;
 
             case 'diagonal':
-                // Effet diagonal
                 const diagProgress = i / numSlats;
                 length = layout.minLength + (maxSlatLength - layout.minLength) * diagProgress;
                 if (layout.startSide === 'right') {
@@ -109,7 +139,6 @@ function generateSlats(config) {
                 break;
 
             case 'random':
-                // Aléatoire contrôlé
                 length = layout.minLength + Math.random() * (maxSlatLength - layout.minLength);
                 if (layout.startSide === 'left') {
                     x = 0;
@@ -121,7 +150,6 @@ function generateSlats(config) {
                 break;
         }
 
-        // Arrondir la longueur au cm
         length = Math.round(length);
 
         slats.push({
@@ -136,7 +164,10 @@ function generateSlats(config) {
     return slats;
 }
 
-// Dessiner une lame avec texture bois
+// ==========================================
+// Dessin
+// ==========================================
+
 function drawSlat(slat, config, scale) {
     const colors = woodColors[config.appearance.woodColor];
     const x = slat.x * scale;
@@ -144,33 +175,28 @@ function drawSlat(slat, config, scale) {
     const width = slat.length * scale;
     const height = slat.width * scale;
 
-    // Ombre portée
+    // Ombre
     ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
     ctx.shadowBlur = 8 * scale;
     ctx.shadowOffsetX = 3 * scale;
     ctx.shadowOffsetY = 3 * scale;
 
-    // Corps de la lame
     ctx.fillStyle = colors.base;
     ctx.fillRect(x, y, width, height);
 
-    // Réinitialiser l'ombre pour les détails
     ctx.shadowColor = 'transparent';
     ctx.shadowBlur = 0;
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 0;
 
-    // Texture grain de bois
+    // Grain
     ctx.strokeStyle = colors.grain;
     ctx.lineWidth = 0.5;
-
     const grainLines = Math.floor(height / (3 * scale));
     for (let i = 0; i < grainLines; i++) {
         const lineY = y + (i + 0.5) * (height / grainLines);
         ctx.beginPath();
         ctx.moveTo(x, lineY);
-
-        // Ligne ondulée pour le grain
         for (let gx = 0; gx < width; gx += 10) {
             const offsetY = Math.sin(gx * 0.05 + i) * 1.5;
             ctx.lineTo(x + gx, lineY + offsetY);
@@ -178,39 +204,36 @@ function drawSlat(slat, config, scale) {
         ctx.stroke();
     }
 
-    // Reflet sur le bord supérieur
+    // Reflet
     const gradient = ctx.createLinearGradient(x, y, x, y + height * 0.3);
     gradient.addColorStop(0, 'rgba(255, 255, 255, 0.15)');
     gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
     ctx.fillStyle = gradient;
     ctx.fillRect(x, y, width, height * 0.3);
 
-    // Bordure subtile
+    // Bordure
     ctx.strokeStyle = colors.grain;
     ctx.lineWidth = 1;
     ctx.strokeRect(x, y, width, height);
 }
 
-// Dessiner le mur complet
 function drawWall(config, slats) {
     const { wall } = config;
 
-    // Calculer l'échelle pour le canvas
     const maxCanvasWidth = 800;
     const maxCanvasHeight = 600;
     const scaleX = maxCanvasWidth / wall.width;
     const scaleY = maxCanvasHeight / wall.height;
-    const scale = Math.min(scaleX, scaleY, 2); // Max scale de 2 pour la qualité
+    const scale = Math.min(scaleX, scaleY, 2);
 
-    // Ajuster les dimensions du canvas
     elements.canvas.width = wall.width * scale;
     elements.canvas.height = wall.height * scale;
 
-    // Fond du mur
+    // Fond
     ctx.fillStyle = wall.color;
     ctx.fillRect(0, 0, elements.canvas.width, elements.canvas.height);
 
-    // Texture subtile du mur
+    // Texture
     ctx.fillStyle = 'rgba(0, 0, 0, 0.03)';
     for (let i = 0; i < 1000; i++) {
         const x = Math.random() * elements.canvas.width;
@@ -218,68 +241,43 @@ function drawWall(config, slats) {
         ctx.fillRect(x, y, 1, 1);
     }
 
-    // Dessiner chaque lame
-    slats.forEach(slat => {
-        drawSlat(slat, config, scale);
-    });
+    // Lames
+    slats.forEach(slat => drawSlat(slat, config, scale));
 
-    // Cotations (dimensions)
-    drawDimensions(config, scale);
-}
-
-// Dessiner les cotations
-function drawDimensions(config, scale) {
-    const { wall } = config;
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-    ctx.font = `${12 * Math.min(scale, 1)}px Arial`;
+    // Cotations
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.font = `${12 * Math.min(scale, 1)}px Inter, sans-serif`;
     ctx.textAlign = 'center';
+    ctx.fillText(`${wall.width} cm`, elements.canvas.width / 2, elements.canvas.height - 8);
 
-    // Largeur du mur
-    ctx.fillText(`${wall.width} cm`, elements.canvas.width / 2, elements.canvas.height - 5);
-
-    // Hauteur du mur
     ctx.save();
-    ctx.translate(12, elements.canvas.height / 2);
+    ctx.translate(15, elements.canvas.height / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.fillText(`${wall.height} cm`, 0, 0);
     ctx.restore();
+
+    // MAJ dimensions affichées
+    elements.canvasDimensions.textContent = `${wall.width} × ${wall.height} cm`;
 }
 
-// Calculer et afficher le récapitulatif des matériaux
-function displayMaterialsSummary(config, slats) {
-    const { slat } = config;
+// ==========================================
+// Calculs et affichage des matériaux
+// ==========================================
 
-    // Grouper les lames par longueur
-    const lengthGroups = {};
+function calculateBins(slats, maxAvailable) {
+    const bins = [];
+    const sortedLengths = {};
+
     slats.forEach(s => {
-        const length = s.length;
-        if (!lengthGroups[length]) {
-            lengthGroups[length] = [];
-        }
-        lengthGroups[length].push(s);
+        if (!sortedLengths[s.length]) sortedLengths[s.length] = 0;
+        sortedLengths[s.length]++;
     });
 
-    // Calculer les totaux
-    const totalSlats = slats.length;
-    const totalLength = slats.reduce((sum, s) => sum + s.length, 0);
-    const totalLengthMeters = (totalLength / 100).toFixed(2);
+    const lengths = Object.keys(sortedLengths).map(Number).sort((a, b) => b - a);
 
-    // Calculer le nombre de lames à acheter (basé sur la longueur max disponible)
-    const maxAvailable = slat.maxLength;
-    let slatsToBuy = 0;
-    let wasteLength = 0;
-
-    // Trier les longueurs par ordre décroissant pour optimiser les coupes
-    const sortedLengths = Object.keys(lengthGroups).map(Number).sort((a, b) => b - a);
-    const cutPlan = [];
-
-    // Algorithme de bin packing simple (First Fit Decreasing)
-    const bins = []; // Chaque bin représente une lame achetée
-
-    sortedLengths.forEach(length => {
-        const count = lengthGroups[length].length;
+    lengths.forEach(length => {
+        const count = sortedLengths[length];
         for (let i = 0; i < count; i++) {
-            // Chercher un bin existant où cette lame peut rentrer
             let placed = false;
             for (let bin of bins) {
                 if (bin.remaining >= length) {
@@ -289,8 +287,6 @@ function displayMaterialsSummary(config, slats) {
                     break;
                 }
             }
-
-            // Si pas trouvé, créer un nouveau bin
             if (!placed) {
                 bins.push({
                     cuts: [length],
@@ -300,156 +296,424 @@ function displayMaterialsSummary(config, slats) {
         }
     });
 
-    slatsToBuy = bins.length;
-    wasteLength = bins.reduce((sum, bin) => sum + bin.remaining, 0);
-    const wastePercent = ((wasteLength / (slatsToBuy * maxAvailable)) * 100).toFixed(1);
+    return bins;
+}
 
-    // Générer le HTML du récapitulatif
+function displayMaterialsSummary(config, slats) {
+    const { slat } = config;
+    const bins = calculateBins(slats, slat.maxLength);
+
+    const totalSlats = slats.length;
+    const totalLength = slats.reduce((sum, s) => sum + s.length, 0);
+    const totalLengthMeters = (totalLength / 100).toFixed(2);
+    const slatsToBuy = bins.length;
+    const wasteLength = bins.reduce((sum, bin) => sum + bin.remaining, 0);
+    const wastePercent = ((wasteLength / (slatsToBuy * slat.maxLength)) * 100).toFixed(1);
+
+    // Grouper par longueur
+    const lengthGroups = {};
+    slats.forEach(s => {
+        if (!lengthGroups[s.length]) lengthGroups[s.length] = 0;
+        lengthGroups[s.length]++;
+    });
+    const sortedLengths = Object.keys(lengthGroups).map(Number).sort((a, b) => b - a);
+
     let html = `
-        <div class="materials-grid">
-            <div class="material-card">
-                <h3>Nombre de lames à poser</h3>
-                <span class="value">${totalSlats}</span>
-                <span class="unit">pièces</span>
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+            <div class="bg-gradient-to-br from-wood-100 to-wood-50 rounded-xl p-4">
+                <div class="text-xs text-wood-600 mb-1">Lames à poser</div>
+                <div class="text-2xl font-bold text-wood-900">${totalSlats}</div>
+                <div class="text-xs text-wood-500">pièces</div>
             </div>
-            <div class="material-card">
-                <h3>Longueur totale</h3>
-                <span class="value">${totalLengthMeters}</span>
-                <span class="unit">mètres linéaires</span>
+            <div class="bg-gradient-to-br from-wood-100 to-wood-50 rounded-xl p-4">
+                <div class="text-xs text-wood-600 mb-1">Longueur totale</div>
+                <div class="text-2xl font-bold text-wood-900">${totalLengthMeters}</div>
+                <div class="text-xs text-wood-500">mètres linéaires</div>
             </div>
-            <div class="material-card">
-                <h3>Lames à acheter</h3>
-                <span class="value">${slatsToBuy}</span>
-                <span class="unit">lames de ${maxAvailable} cm</span>
+            <div class="bg-gradient-to-br from-green-100 to-green-50 rounded-xl p-4">
+                <div class="text-xs text-green-700 mb-1">Lames à acheter</div>
+                <div class="text-2xl font-bold text-green-800">${slatsToBuy}</div>
+                <div class="text-xs text-green-600">× ${slat.maxLength} cm</div>
             </div>
-            <div class="material-card">
-                <h3>Chutes estimées</h3>
-                <span class="value">${(wasteLength / 100).toFixed(2)}</span>
-                <span class="unit">m (${wastePercent}%)</span>
-            </div>
-        </div>
-
-        <div class="slats-breakdown">
-            <h3>Détail des découpes par longueur</h3>
-    `;
-
-    // Afficher les groupes de longueur
-    sortedLengths.forEach(length => {
-        const count = lengthGroups[length].length;
-        html += `
-            <div class="length-group-header">
-                <span class="length">${length} cm</span>
-                <span class="count">${count} pièce${count > 1 ? 's' : ''}</span>
-            </div>
-        `;
-    });
-
-    // Plan de coupe optimisé
-    html += `
-        <div class="shopping-list">
-            <h3>🪚 Plan de coupe optimisé</h3>
-            <p style="color: var(--text-muted); margin-bottom: 16px; font-size: 0.9rem;">
-                Comment découper vos ${slatsToBuy} lames de ${maxAvailable} cm :
-            </p>
-    `;
-
-    bins.forEach((bin, index) => {
-        const cutsStr = bin.cuts.join(' + ');
-        const used = bin.cuts.reduce((a, b) => a + b, 0);
-        html += `
-            <div class="shopping-item">
-                <span class="item-name">Lame ${index + 1}: ${cutsStr} cm</span>
-                <span class="item-qty">Chute: ${bin.remaining} cm</span>
-            </div>
-        `;
-    });
-
-    html += `
-        </div>
-
-        <div class="shopping-list">
-            <h3>🛒 Liste d'achats</h3>
-            <div class="shopping-item">
-                <span class="item-name">Lames ${slat.width} × ${slat.thickness} × ${maxAvailable} cm</span>
-                <span class="item-qty">${slatsToBuy} pièces</span>
-            </div>
-            <div class="shopping-item">
-                <span class="item-name">Vis de fixation (2 par lame)</span>
-                <span class="item-qty">${totalSlats * 2} pièces</span>
-            </div>
-            <div class="shopping-item">
-                <span class="item-name">Chevilles murales</span>
-                <span class="item-qty">${totalSlats * 2} pièces</span>
+            <div class="bg-gradient-to-br from-amber-100 to-amber-50 rounded-xl p-4">
+                <div class="text-xs text-amber-700 mb-1">Chutes</div>
+                <div class="text-2xl font-bold text-amber-800">${(wasteLength / 100).toFixed(2)}</div>
+                <div class="text-xs text-amber-600">m (${wastePercent}%)</div>
             </div>
         </div>
 
-        <button class="export-btn" onclick="exportData()">📋 Exporter la liste</button>
+        <div class="grid lg:grid-cols-2 gap-6">
+            <div>
+                <h3 class="text-sm font-semibold text-wood-900 mb-3 flex items-center gap-2">
+                    <span class="w-6 h-6 rounded bg-wood-100 flex items-center justify-center text-xs">📐</span>
+                    Découpes par longueur
+                </h3>
+                <div class="space-y-2">
+                    ${sortedLengths.map(length => `
+                        <div class="flex items-center justify-between bg-wood-50 rounded-lg px-4 py-2">
+                            <span class="font-medium text-wood-800">${length} cm</span>
+                            <span class="bg-wood-200 text-wood-800 px-3 py-1 rounded-full text-sm font-medium">${lengthGroups[length]} pièce${lengthGroups[length] > 1 ? 's' : ''}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+
+            <div>
+                <h3 class="text-sm font-semibold text-wood-900 mb-3 flex items-center gap-2">
+                    <span class="w-6 h-6 rounded bg-wood-100 flex items-center justify-center text-xs">🪚</span>
+                    Plan de coupe optimisé
+                </h3>
+                <div class="space-y-2 max-h-64 overflow-y-auto pr-2">
+                    ${bins.map((bin, index) => `
+                        <div class="bg-wood-50 rounded-lg px-4 py-3">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-xs text-wood-500">Lame ${index + 1}</span>
+                                <span class="text-xs text-amber-600">Chute: ${bin.remaining} cm</span>
+                            </div>
+                            <div class="text-sm font-medium text-wood-800">${bin.cuts.join(' + ')} cm</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-6 pt-6 border-t border-wood-100">
+            <h3 class="text-sm font-semibold text-wood-900 mb-3 flex items-center gap-2">
+                <span class="w-6 h-6 rounded bg-wood-100 flex items-center justify-center text-xs">🛒</span>
+                Liste d'achats
+            </h3>
+            <div class="grid sm:grid-cols-3 gap-3">
+                <div class="flex items-center justify-between bg-green-50 rounded-lg px-4 py-3">
+                    <span class="text-sm text-green-800">Lames ${slat.width}×${slat.thickness}×${slat.maxLength}cm</span>
+                    <span class="font-bold text-green-700">${slatsToBuy}</span>
+                </div>
+                <div class="flex items-center justify-between bg-blue-50 rounded-lg px-4 py-3">
+                    <span class="text-sm text-blue-800">Vis de fixation</span>
+                    <span class="font-bold text-blue-700">${totalSlats * 2}</span>
+                </div>
+                <div class="flex items-center justify-between bg-purple-50 rounded-lg px-4 py-3">
+                    <span class="text-sm text-purple-800">Chevilles</span>
+                    <span class="font-bold text-purple-700">${totalSlats * 2}</span>
+                </div>
+            </div>
+        </div>
     `;
 
     elements.materialsSummary.innerHTML = html;
 
-    // Sauvegarder l'état pour l'export
     state.slats = slats;
     state.config = config;
     state.bins = bins;
 }
 
-// Exporter les données
-function exportData() {
+// ==========================================
+// Export PDF
+// ==========================================
+
+async function exportPDF() {
+    const { jsPDF } = window.jspdf;
     const { config, slats, bins } = state;
 
-    let text = `SIMULATEUR MUR EN LAMES DE BOIS\n`;
-    text += `${'='.repeat(40)}\n\n`;
+    if (!slats.length) {
+        alert('Veuillez d\'abord générer une simulation.');
+        return;
+    }
 
-    text += `CONFIGURATION\n`;
-    text += `-`.repeat(20) + `\n`;
-    text += `Mur: ${config.wall.width} × ${config.wall.height} cm\n`;
-    text += `Lames: ${config.slat.width} × ${config.slat.thickness} cm\n`;
-    text += `Écart entre lames: ${config.layout.gap} cm\n`;
-    text += `Longueur dispo: ${config.slat.maxLength} cm\n\n`;
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const margin = 15;
+    let y = margin;
 
-    text += `RÉSUMÉ\n`;
-    text += `-`.repeat(20) + `\n`;
-    text += `Nombre de lames à poser: ${slats.length}\n`;
-    text += `Lames à acheter: ${bins.length} × ${config.slat.maxLength} cm\n\n`;
+    // Titre
+    pdf.setFontSize(20);
+    pdf.setTextColor(67, 48, 43);
+    pdf.text('Wood Wall Designer', margin, y);
+    y += 8;
 
-    text += `DÉTAIL DES DÉCOUPES\n`;
-    text += `-`.repeat(20) + `\n`;
+    pdf.setFontSize(10);
+    pdf.setTextColor(100);
+    pdf.text(`Généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}`, margin, y);
+    y += 15;
 
-    // Grouper par longueur
-    const groups = {};
+    // Configuration
+    pdf.setFontSize(14);
+    pdf.setTextColor(67, 48, 43);
+    pdf.text('Configuration', margin, y);
+    y += 8;
+
+    pdf.setFontSize(10);
+    pdf.setTextColor(60);
+    const configLines = [
+        `Mur: ${config.wall.width} × ${config.wall.height} cm`,
+        `Lames: ${config.slat.width} × ${config.slat.thickness} cm`,
+        `Longueur disponible: ${config.slat.maxLength} cm`,
+        `Écart entre lames: ${config.layout.gap} cm`,
+        `Motif: ${config.layout.pattern}`,
+        `Teinte: ${woodColors[config.appearance.woodColor].name}`
+    ];
+    configLines.forEach(line => {
+        pdf.text(line, margin, y);
+        y += 5;
+    });
+    y += 10;
+
+    // Image du canvas
+    const canvasData = elements.canvas.toDataURL('image/png');
+    const imgWidth = pageWidth - (margin * 2);
+    const imgHeight = (elements.canvas.height / elements.canvas.width) * imgWidth;
+    pdf.addImage(canvasData, 'PNG', margin, y, imgWidth, imgHeight);
+    y += imgHeight + 15;
+
+    // Résumé
+    pdf.setFontSize(14);
+    pdf.setTextColor(67, 48, 43);
+    pdf.text('Résumé', margin, y);
+    y += 8;
+
+    const totalLength = slats.reduce((sum, s) => sum + s.length, 0);
+    const wasteLength = bins.reduce((sum, bin) => sum + bin.remaining, 0);
+
+    pdf.setFontSize(10);
+    pdf.setTextColor(60);
+    const summaryLines = [
+        `Nombre de lames à poser: ${slats.length}`,
+        `Longueur totale: ${(totalLength / 100).toFixed(2)} m`,
+        `Lames à acheter: ${bins.length} × ${config.slat.maxLength} cm`,
+        `Chutes estimées: ${(wasteLength / 100).toFixed(2)} m`
+    ];
+    summaryLines.forEach(line => {
+        pdf.text(line, margin, y);
+        y += 5;
+    });
+    y += 10;
+
+    // Nouvelle page pour les détails
+    pdf.addPage();
+    y = margin;
+
+    // Découpes par longueur
+    pdf.setFontSize(14);
+    pdf.setTextColor(67, 48, 43);
+    pdf.text('Découpes par longueur', margin, y);
+    y += 8;
+
+    const lengthGroups = {};
     slats.forEach(s => {
-        if (!groups[s.length]) groups[s.length] = 0;
-        groups[s.length]++;
+        if (!lengthGroups[s.length]) lengthGroups[s.length] = 0;
+        lengthGroups[s.length]++;
     });
 
-    Object.keys(groups).sort((a, b) => b - a).forEach(len => {
-        text += `${len} cm: ${groups[len]} pièce(s)\n`;
+    pdf.setFontSize(10);
+    pdf.setTextColor(60);
+    Object.keys(lengthGroups).sort((a, b) => b - a).forEach(length => {
+        pdf.text(`${length} cm: ${lengthGroups[length]} pièce(s)`, margin, y);
+        y += 5;
     });
+    y += 10;
 
-    text += `\nPLAN DE COUPE\n`;
-    text += `-`.repeat(20) + `\n`;
+    // Plan de coupe
+    pdf.setFontSize(14);
+    pdf.setTextColor(67, 48, 43);
+    pdf.text('Plan de coupe optimisé', margin, y);
+    y += 8;
+
+    pdf.setFontSize(10);
+    pdf.setTextColor(60);
     bins.forEach((bin, i) => {
-        text += `Lame ${i + 1}: ${bin.cuts.join(' + ')} cm (chute: ${bin.remaining} cm)\n`;
+        if (y > 270) {
+            pdf.addPage();
+            y = margin;
+        }
+        pdf.text(`Lame ${i + 1}: ${bin.cuts.join(' + ')} cm (chute: ${bin.remaining} cm)`, margin, y);
+        y += 5;
     });
+    y += 10;
 
-    text += `\nLISTE D'ACHATS\n`;
-    text += `-`.repeat(20) + `\n`;
-    text += `- ${bins.length} lames de ${config.slat.width} × ${config.slat.thickness} × ${config.slat.maxLength} cm\n`;
-    text += `- ${slats.length * 2} vis de fixation\n`;
-    text += `- ${slats.length * 2} chevilles murales\n`;
+    // Liste d'achats
+    if (y > 250) {
+        pdf.addPage();
+        y = margin;
+    }
 
-    // Télécharger le fichier
-    const blob = new Blob([text], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'mur-lames-bois.txt';
-    a.click();
-    URL.revokeObjectURL(url);
+    pdf.setFontSize(14);
+    pdf.setTextColor(67, 48, 43);
+    pdf.text('Liste d\'achats', margin, y);
+    y += 8;
+
+    pdf.setFontSize(10);
+    pdf.setTextColor(60);
+    pdf.text(`• ${bins.length} lames de ${config.slat.width} × ${config.slat.thickness} × ${config.slat.maxLength} cm`, margin, y);
+    y += 5;
+    pdf.text(`• ${slats.length * 2} vis de fixation`, margin, y);
+    y += 5;
+    pdf.text(`• ${slats.length * 2} chevilles murales`, margin, y);
+
+    // Sauvegarde
+    pdf.save(`wood-wall-design-${Date.now()}.pdf`);
 }
 
-// Générer la simulation
+// ==========================================
+// Historique (LocalStorage)
+// ==========================================
+
+function loadHistory() {
+    try {
+        const saved = localStorage.getItem('woodWallHistory');
+        state.history = saved ? JSON.parse(saved) : [];
+    } catch (e) {
+        state.history = [];
+    }
+    updateHistoryBadge();
+}
+
+function saveToHistory() {
+    const { config, slats, bins } = state;
+
+    if (!slats.length) {
+        alert('Veuillez d\'abord générer une simulation.');
+        return;
+    }
+
+    const entry = {
+        id: Date.now(),
+        date: new Date().toISOString(),
+        config: config,
+        slatsCount: slats.length,
+        slatsToBuy: bins.length,
+        thumbnail: elements.canvas.toDataURL('image/jpeg', 0.5)
+    };
+
+    state.history.unshift(entry);
+
+    // Garder max 20 entrées
+    if (state.history.length > 20) {
+        state.history = state.history.slice(0, 20);
+    }
+
+    localStorage.setItem('woodWallHistory', JSON.stringify(state.history));
+    updateHistoryBadge();
+    renderHistoryList();
+
+    // Feedback visuel
+    elements.saveBtn.innerHTML = `
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+        </svg>
+        Sauvegardé !
+    `;
+    setTimeout(() => {
+        elements.saveBtn.innerHTML = `
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+            </svg>
+            Sauvegarder
+        `;
+    }, 2000);
+}
+
+function updateHistoryBadge() {
+    const count = state.history.length;
+    if (count > 0) {
+        elements.historyBadge.textContent = count;
+        elements.historyBadge.classList.remove('hidden');
+        elements.historyBadge.classList.add('flex');
+    } else {
+        elements.historyBadge.classList.add('hidden');
+        elements.historyBadge.classList.remove('flex');
+    }
+}
+
+function renderHistoryList() {
+    if (state.history.length === 0) {
+        elements.historyList.innerHTML = `
+            <div class="text-center text-wood-400 py-8">
+                Aucune simulation sauvegardée
+            </div>
+        `;
+        return;
+    }
+
+    elements.historyList.innerHTML = state.history.map(entry => {
+        const date = new Date(entry.date);
+        const dateStr = date.toLocaleDateString('fr-FR');
+        const timeStr = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+        return `
+            <div class="bg-wood-50 rounded-xl p-4 hover:bg-wood-100 transition-colors">
+                <div class="flex gap-4">
+                    <img src="${entry.thumbnail}" alt="Aperçu" class="w-20 h-16 object-cover rounded-lg">
+                    <div class="flex-1 min-w-0">
+                        <div class="text-xs text-wood-500">${dateStr} à ${timeStr}</div>
+                        <div class="text-sm font-medium text-wood-900 mt-1">
+                            ${entry.config.wall.width} × ${entry.config.wall.height} cm
+                        </div>
+                        <div class="text-xs text-wood-600 mt-1">
+                            ${entry.slatsCount} lames • ${entry.slatsToBuy} à acheter
+                        </div>
+                    </div>
+                </div>
+                <div class="flex gap-2 mt-3">
+                    <button onclick="loadFromHistory(${entry.id})" class="flex-1 py-2 px-3 text-xs font-medium bg-wood-200 text-wood-800 rounded-lg hover:bg-wood-300 transition-colors">
+                        Charger
+                    </button>
+                    <button onclick="deleteFromHistory(${entry.id})" class="py-2 px-3 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function loadFromHistory(id) {
+    const entry = state.history.find(e => e.id === id);
+    if (entry) {
+        setConfig(entry.config);
+        generate();
+        closeHistoryModal();
+    }
+}
+
+function deleteFromHistory(id) {
+    state.history = state.history.filter(e => e.id !== id);
+    localStorage.setItem('woodWallHistory', JSON.stringify(state.history));
+    updateHistoryBadge();
+    renderHistoryList();
+}
+
+// ==========================================
+// Menu mobile
+// ==========================================
+
+function openMenu() {
+    elements.configPanel.classList.remove('-translate-x-full');
+    elements.configOverlay.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeMenu() {
+    elements.configPanel.classList.add('-translate-x-full');
+    elements.configOverlay.classList.add('hidden');
+    document.body.style.overflow = '';
+}
+
+function openHistoryModal() {
+    elements.historyModal.classList.remove('hidden');
+    renderHistoryList();
+    document.body.style.overflow = 'hidden';
+}
+
+function closeHistoryModal() {
+    elements.historyModal.classList.add('hidden');
+    document.body.style.overflow = '';
+}
+
+// ==========================================
+// Génération principale
+// ==========================================
+
 function generate() {
     const config = getConfig();
     const slats = generateSlats(config);
@@ -457,62 +721,64 @@ function generate() {
     displayMaterialsSummary(config, slats);
 }
 
-// Variation aléatoire
-function randomize() {
-    const config = getConfig();
-    // Modifier légèrement les paramètres pour créer une variation
-    config.layout.pattern = 'random';
-    const slats = generateSlats(config);
-    drawWall(config, slats);
-    displayMaterialsSummary(config, slats);
-}
+// ==========================================
+// Event Listeners
+// ==========================================
 
-// Mobile menu functions
-function openMenu() {
-    elements.configPanel.classList.add('open');
-    elements.configOverlay.classList.add('active');
-    elements.menuToggle.classList.add('active');
-    document.body.style.overflow = 'hidden';
-}
-
-function closeMenu() {
-    elements.configPanel.classList.remove('open');
-    elements.configOverlay.classList.remove('active');
-    elements.menuToggle.classList.remove('active');
-    document.body.style.overflow = '';
-}
-
-// Event listeners
+// Génération
 elements.generateBtn.addEventListener('click', () => {
     generate();
-    // Fermer le menu sur mobile après génération
-    if (window.innerWidth <= 900) {
-        closeMenu();
-    }
-});
-elements.randomizeBtn.addEventListener('click', () => {
-    randomize();
-    if (window.innerWidth <= 900) {
-        closeMenu();
-    }
+    if (window.innerWidth < 1024) closeMenu();
 });
 
-// Mobile menu events
-elements.menuToggle.addEventListener('click', () => {
-    if (elements.configPanel.classList.contains('open')) {
-        closeMenu();
-    } else {
-        openMenu();
-    }
+// Sauvegarde
+elements.saveBtn.addEventListener('click', () => {
+    saveToHistory();
+    if (window.innerWidth < 1024) closeMenu();
 });
 
+// Export PDF
+elements.exportPdfBtn.addEventListener('click', exportPDF);
+elements.exportPdfBtnMobile.addEventListener('click', () => {
+    exportPDF();
+    closeMenu();
+});
+
+// Menu mobile
+elements.menuToggle.addEventListener('click', openMenu);
 elements.closePanel.addEventListener('click', closeMenu);
 elements.configOverlay.addEventListener('click', closeMenu);
 
-// Générer au chargement
-window.addEventListener('load', generate);
+// Historique
+elements.historyBtn.addEventListener('click', openHistoryModal);
+elements.closeHistory.addEventListener('click', closeHistoryModal);
+elements.historyOverlay.addEventListener('click', closeHistoryModal);
 
-// Mettre à jour en temps réel (optionnel)
+// Sync couleur mur
+elements.wallColor.addEventListener('input', (e) => {
+    elements.wallColorHex.value = e.target.value;
+});
+elements.wallColorHex.addEventListener('input', (e) => {
+    const val = e.target.value;
+    if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+        elements.wallColor.value = val;
+    }
+});
+
+// Mise à jour en temps réel
 document.querySelectorAll('input, select').forEach(input => {
     input.addEventListener('change', generate);
 });
+
+// ==========================================
+// Initialisation
+// ==========================================
+
+window.addEventListener('load', () => {
+    loadHistory();
+    generate();
+});
+
+// Exposer fonctions pour les boutons inline
+window.loadFromHistory = loadFromHistory;
+window.deleteFromHistory = deleteFromHistory;

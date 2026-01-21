@@ -3,129 +3,310 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulateur Mur en Lames de Bois</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Wood Wall Designer - Simulateur Mur en Lames de Bois</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        wood: {
+                            50: '#fdf8f6',
+                            100: '#f2e8e5',
+                            200: '#eaddd7',
+                            300: '#e0cec7',
+                            400: '#d2bab0',
+                            500: '#bfa094',
+                            600: '#a18072',
+                            700: '#977669',
+                            800: '#846358',
+                            900: '#43302b',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .glass-dark {
+            background: rgba(67, 48, 43, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        input[type="number"], select {
+            -moz-appearance: textfield;
+        }
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .scrollbar-thin::-webkit-scrollbar {
+            width: 6px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+            background: rgba(67, 48, 43, 0.3);
+            border-radius: 3px;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(-100%); }
+            to { transform: translateX(0); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .animate-slideIn {
+            animation: slideIn 0.3s ease-out;
+        }
+        .animate-fadeIn {
+            animation: fadeIn 0.3s ease-out;
+        }
+    </style>
 </head>
-<body>
-    <div class="container">
-        <header>
-            <h1>Simulateur Mur en Lames de Bois</h1>
-            <p>Configurez votre décoration murale et obtenez la liste des matériaux</p>
-            <button class="menu-toggle" id="menuToggle" aria-label="Ouvrir le menu">
-                <span></span>
-                <span></span>
-                <span></span>
-            </button>
-        </header>
-
-        <main>
-            <div class="config-panel" id="configPanel">
-                <div class="config-panel-header">
-                    <h2>Configuration</h2>
-                    <button class="close-panel" id="closePanel" aria-label="Fermer le menu">&times;</button>
-                </div>
-                <section class="config-section">
-                    <h2>Dimensions du mur</h2>
-                    <div class="input-group">
-                        <label for="wallWidth">Largeur (cm)</label>
-                        <input type="number" id="wallWidth" value="300" min="50" max="1000">
-                    </div>
-                    <div class="input-group">
-                        <label for="wallHeight">Hauteur (cm)</label>
-                        <input type="number" id="wallHeight" value="250" min="50" max="500">
-                    </div>
-                </section>
-
-                <section class="config-section">
-                    <h2>Dimensions des lames</h2>
-                    <div class="input-group">
-                        <label for="slatWidth">Largeur de lame (cm)</label>
-                        <input type="number" id="slatWidth" value="7" min="1" max="30" step="0.5">
-                    </div>
-                    <div class="input-group">
-                        <label for="slatThickness">Épaisseur (cm)</label>
-                        <input type="number" id="slatThickness" value="2" min="0.5" max="10" step="0.5">
-                    </div>
-                    <div class="input-group">
-                        <label for="slatMaxLength">Longueur max disponible (cm)</label>
-                        <input type="number" id="slatMaxLength" value="240" min="50" max="600">
-                    </div>
-                </section>
-
-                <section class="config-section">
-                    <h2>Espacement</h2>
-                    <div class="input-group">
-                        <label for="slatGap">Écart entre lames (cm)</label>
-                        <input type="number" id="slatGap" value="3" min="0.5" max="20" step="0.5">
-                    </div>
-                </section>
-
-                <section class="config-section">
-                    <h2>Style de disposition</h2>
-                    <div class="input-group">
-                        <label for="pattern">Motif</label>
-                        <select id="pattern">
-                            <option value="staggered">Décalé (comme l'image)</option>
-                            <option value="centered">Centré symétrique</option>
-                            <option value="diagonal">Diagonal</option>
-                            <option value="random">Aléatoire contrôlé</option>
-                        </select>
-                    </div>
-                    <div class="input-group">
-                        <label for="minLength">Longueur min des lames (cm)</label>
-                        <input type="number" id="minLength" value="30" min="10" max="200">
-                    </div>
-                    <div class="input-group">
-                        <label for="maxLengthPercent">Longueur max (% largeur mur)</label>
-                        <input type="number" id="maxLengthPercent" value="80" min="20" max="100">
-                    </div>
-                    <div class="input-group">
-                        <label for="startSide">Départ des lames</label>
-                        <select id="startSide">
-                            <option value="left">Depuis la gauche</option>
-                            <option value="right">Depuis la droite</option>
-                            <option value="both">Des deux côtés</option>
-                        </select>
-                    </div>
-                </section>
-
-                <section class="config-section">
-                    <h2>Apparence</h2>
-                    <div class="input-group">
-                        <label for="woodColor">Teinte du bois</label>
-                        <select id="woodColor">
-                            <option value="walnut">Noyer foncé</option>
-                            <option value="oak">Chêne clair</option>
-                            <option value="pine">Pin naturel</option>
-                            <option value="ebony">Ébène</option>
-                            <option value="cherry">Cerisier</option>
-                        </select>
-                    </div>
-                    <div class="input-group">
-                        <label for="wallColor">Couleur du mur</label>
-                        <input type="color" id="wallColor" value="#6b7b8c">
-                    </div>
-                </section>
-
-                <button id="generateBtn" class="btn-primary">Générer la simulation</button>
-                <button id="randomizeBtn" class="btn-secondary">Variation aléatoire</button>
-            </div>
-
-            <div class="preview-panel">
-                <div class="canvas-container">
-                    <canvas id="wallCanvas"></canvas>
-                </div>
-
-                <div class="results-panel">
-                    <h2>Récapitulatif des matériaux</h2>
-                    <div id="materialsSummary">
-                        <p class="placeholder">Cliquez sur "Générer" pour voir le récapitulatif</p>
-                    </div>
+<body class="bg-gradient-to-br from-wood-50 via-white to-wood-100 min-h-screen font-sans">
+    <!-- Header -->
+    <header class="sticky top-0 z-40 glass border-b border-wood-200">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <button id="menuToggle" class="lg:hidden p-2 rounded-lg bg-wood-900 text-white hover:bg-wood-800 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
+                <div>
+                    <h1 class="text-xl md:text-2xl font-bold text-wood-900 flex items-center gap-2">
+                        <span class="text-2xl">🪵</span> Wood Wall Designer
+                    </h1>
+                    <p class="text-xs md:text-sm text-wood-600 hidden sm:block">Simulateur de décoration murale en lames de bois</p>
                 </div>
             </div>
-        </main>
+            <div class="flex items-center gap-2">
+                <button id="historyBtn" class="relative p-2 rounded-lg bg-wood-100 text-wood-700 hover:bg-wood-200 transition-colors" title="Historique">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span id="historyBadge" class="hidden absolute -top-1 -right-1 w-5 h-5 bg-wood-600 text-white text-xs rounded-full flex items-center justify-center">0</span>
+                </button>
+                <button id="exportPdfBtn" class="hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg bg-wood-900 text-white hover:bg-wood-800 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    Export PDF
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-6 lg:flex lg:gap-6">
+        <!-- Overlay mobile -->
+        <div id="configOverlay" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden"></div>
+
+        <!-- Config Panel -->
+        <aside id="configPanel" class="fixed lg:relative inset-y-0 left-0 z-50 w-80 lg:w-72 xl:w-80 bg-white lg:bg-transparent shadow-2xl lg:shadow-none transform -translate-x-full lg:translate-x-0 transition-transform duration-300 overflow-y-auto scrollbar-thin">
+            <div class="lg:sticky lg:top-24 space-y-4 p-5 lg:p-0">
+                <!-- Mobile header -->
+                <div class="flex items-center justify-between lg:hidden mb-4">
+                    <h2 class="text-lg font-semibold text-wood-900">Configuration</h2>
+                    <button id="closePanel" class="p-2 rounded-lg hover:bg-wood-100 transition-colors">
+                        <svg class="w-5 h-5 text-wood-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Dimensions du mur -->
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-wood-100">
+                    <h3 class="text-sm font-semibold text-wood-900 mb-4 flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-lg bg-wood-100 flex items-center justify-center">📐</span>
+                        Dimensions du mur
+                    </h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs text-wood-500 mb-1">Largeur (cm)</label>
+                            <input type="number" id="wallWidth" value="300" min="50" max="1000" class="w-full px-3 py-2 rounded-lg border border-wood-200 focus:border-wood-500 focus:ring-2 focus:ring-wood-200 outline-none transition-all text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-wood-500 mb-1">Hauteur (cm)</label>
+                            <input type="number" id="wallHeight" value="250" min="50" max="500" class="w-full px-3 py-2 rounded-lg border border-wood-200 focus:border-wood-500 focus:ring-2 focus:ring-wood-200 outline-none transition-all text-sm">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dimensions des lames -->
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-wood-100">
+                    <h3 class="text-sm font-semibold text-wood-900 mb-4 flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-lg bg-wood-100 flex items-center justify-center">📏</span>
+                        Lames de bois
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs text-wood-500 mb-1">Largeur (cm)</label>
+                                <input type="number" id="slatWidth" value="7" min="1" max="30" step="0.5" class="w-full px-3 py-2 rounded-lg border border-wood-200 focus:border-wood-500 focus:ring-2 focus:ring-wood-200 outline-none transition-all text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-wood-500 mb-1">Épaisseur (cm)</label>
+                                <input type="number" id="slatThickness" value="2" min="0.5" max="10" step="0.5" class="w-full px-3 py-2 rounded-lg border border-wood-200 focus:border-wood-500 focus:ring-2 focus:ring-wood-200 outline-none transition-all text-sm">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-wood-500 mb-1">Longueur max dispo (cm)</label>
+                            <input type="number" id="slatMaxLength" value="240" min="50" max="600" class="w-full px-3 py-2 rounded-lg border border-wood-200 focus:border-wood-500 focus:ring-2 focus:ring-wood-200 outline-none transition-all text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-wood-500 mb-1">Écart entre lames (cm)</label>
+                            <input type="number" id="slatGap" value="3" min="0.5" max="20" step="0.5" class="w-full px-3 py-2 rounded-lg border border-wood-200 focus:border-wood-500 focus:ring-2 focus:ring-wood-200 outline-none transition-all text-sm">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Style -->
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-wood-100">
+                    <h3 class="text-sm font-semibold text-wood-900 mb-4 flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-lg bg-wood-100 flex items-center justify-center">🎨</span>
+                        Style & disposition
+                    </h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs text-wood-500 mb-1">Motif</label>
+                            <select id="pattern" class="w-full px-3 py-2 rounded-lg border border-wood-200 focus:border-wood-500 focus:ring-2 focus:ring-wood-200 outline-none transition-all text-sm bg-white">
+                                <option value="staggered">Décalé (vague)</option>
+                                <option value="centered">Centré symétrique</option>
+                                <option value="diagonal">Diagonal</option>
+                                <option value="random">Aléatoire</option>
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs text-wood-500 mb-1">Long. min (cm)</label>
+                                <input type="number" id="minLength" value="30" min="10" max="200" class="w-full px-3 py-2 rounded-lg border border-wood-200 focus:border-wood-500 focus:ring-2 focus:ring-wood-200 outline-none transition-all text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-wood-500 mb-1">Long. max (%)</label>
+                                <input type="number" id="maxLengthPercent" value="80" min="20" max="100" class="w-full px-3 py-2 rounded-lg border border-wood-200 focus:border-wood-500 focus:ring-2 focus:ring-wood-200 outline-none transition-all text-sm">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-wood-500 mb-1">Départ des lames</label>
+                            <select id="startSide" class="w-full px-3 py-2 rounded-lg border border-wood-200 focus:border-wood-500 focus:ring-2 focus:ring-wood-200 outline-none transition-all text-sm bg-white">
+                                <option value="left">Depuis la gauche</option>
+                                <option value="right">Depuis la droite</option>
+                                <option value="both">Alternées</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Apparence -->
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-wood-100">
+                    <h3 class="text-sm font-semibold text-wood-900 mb-4 flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-lg bg-wood-100 flex items-center justify-center">✨</span>
+                        Apparence
+                    </h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs text-wood-500 mb-1">Teinte du bois</label>
+                            <select id="woodColor" class="w-full px-3 py-2 rounded-lg border border-wood-200 focus:border-wood-500 focus:ring-2 focus:ring-wood-200 outline-none transition-all text-sm bg-white">
+                                <option value="walnut">🟤 Noyer foncé</option>
+                                <option value="oak">🟡 Chêne clair</option>
+                                <option value="pine">🟠 Pin naturel</option>
+                                <option value="ebony">⚫ Ébène</option>
+                                <option value="cherry">🔴 Cerisier</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-wood-500 mb-1">Couleur du mur</label>
+                            <div class="flex gap-2">
+                                <input type="color" id="wallColor" value="#6b7b8c" class="w-12 h-10 rounded-lg border border-wood-200 cursor-pointer">
+                                <input type="text" id="wallColorHex" value="#6b7b8c" class="flex-1 px-3 py-2 rounded-lg border border-wood-200 focus:border-wood-500 focus:ring-2 focus:ring-wood-200 outline-none transition-all text-sm uppercase">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Boutons -->
+                <div class="space-y-2">
+                    <button id="generateBtn" class="w-full py-3 px-4 rounded-xl bg-wood-900 text-white font-medium hover:bg-wood-800 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                        Générer
+                    </button>
+                    <button id="saveBtn" class="w-full py-3 px-4 rounded-xl bg-wood-100 text-wood-900 font-medium hover:bg-wood-200 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+                        </svg>
+                        Sauvegarder
+                    </button>
+                    <button id="exportPdfBtnMobile" class="w-full py-3 px-4 rounded-xl border-2 border-wood-300 text-wood-700 font-medium hover:bg-wood-50 active:scale-[0.98] transition-all flex items-center justify-center gap-2 sm:hidden">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        Export PDF
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main content -->
+        <div class="flex-1 space-y-6">
+            <!-- Canvas Preview -->
+            <div class="bg-white rounded-2xl p-4 md:p-6 shadow-sm border border-wood-100">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-wood-900">Aperçu</h2>
+                    <div class="text-sm text-wood-500" id="canvasDimensions">300 × 250 cm</div>
+                </div>
+                <div class="flex justify-center items-center min-h-[300px] md:min-h-[400px] bg-wood-50 rounded-xl overflow-hidden">
+                    <canvas id="wallCanvas" class="max-w-full rounded-lg shadow-lg"></canvas>
+                </div>
+            </div>
+
+            <!-- Results -->
+            <div id="resultsSection" class="bg-white rounded-2xl p-4 md:p-6 shadow-sm border border-wood-100">
+                <h2 class="text-lg font-semibold text-wood-900 mb-4">Récapitulatif</h2>
+                <div id="materialsSummary">
+                    <div class="text-center text-wood-400 py-8">
+                        Cliquez sur "Générer" pour voir le récapitulatif
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- History Modal -->
+    <div id="historyModal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/50" id="historyOverlay"></div>
+        <div class="absolute inset-y-0 right-0 w-full max-w-md bg-white shadow-2xl overflow-y-auto">
+            <div class="sticky top-0 bg-white border-b border-wood-100 p-4 flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-wood-900">Historique des simulations</h2>
+                <button id="closeHistory" class="p-2 rounded-lg hover:bg-wood-100 transition-colors">
+                    <svg class="w-5 h-5 text-wood-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div id="historyList" class="p-4 space-y-3">
+                <div class="text-center text-wood-400 py-8">Aucune simulation sauvegardée</div>
+            </div>
+        </div>
     </div>
-    <div class="config-overlay" id="configOverlay"></div>
 
     <script src="app.js"></script>
 </body>

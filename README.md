@@ -16,7 +16,7 @@ Simulateur de mur décoratif en lames de bois. Configurez les dimensions, choisi
 
 ## Démo
 
-[wall-wood.vercel.app](https://wall-wood.vercel.app)
+[wood-wall.vercel.app](https://wood-wall.vercel.app)
 
 ## Technologies
 

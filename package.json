@@ -1,5 +1,5 @@
 {
-  "name": "wall-wood",
+  "name": "wood-wall",
   "version": "1.0.0",
   "description": "Simulateur de décoration murale en lames de bois",
   "main": "app.js",

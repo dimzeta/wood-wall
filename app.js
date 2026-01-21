@@ -65,7 +65,8 @@ function getConfig() {
             pattern: document.getElementById('pattern').value,
             minLength: parseFloat(document.getElementById('minLength').value),
             maxLengthPercent: parseFloat(document.getElementById('maxLengthPercent').value),
-            startSide: document.getElementById('startSide').value
+            startSide: document.getElementById('startSide').value,
+            tolerance: parseFloat(document.getElementById('tolerance').value) / 100
         },
         appearance: {
             woodColor: document.getElementById('woodColor').value
@@ -86,12 +87,34 @@ function setConfig(config) {
     document.getElementById('minLength').value = config.layout.minLength;
     document.getElementById('maxLengthPercent').value = config.layout.maxLengthPercent;
     document.getElementById('startSide').value = config.layout.startSide;
+    document.getElementById('tolerance').value = (config.layout.tolerance || 0.2) * 100;
+    document.getElementById('toleranceValue').textContent = Math.round((config.layout.tolerance || 0.2) * 100) + '%';
     document.getElementById('woodColor').value = config.appearance.woodColor;
 }
 
 // ==========================================
 // Génération des lames
 // ==========================================
+
+// Applique une variation aléatoire selon la tolérance
+function applyTolerance(baseLength, minLength, maxLength, tolerance) {
+    if (tolerance === 0) return baseLength;
+    const range = maxLength - minLength;
+    const variation = (Math.random() - 0.5) * 2 * tolerance * range;
+    return Math.max(minLength, Math.min(maxLength, baseLength + variation));
+}
+
+// Calcule la position X selon le côté de départ
+function calculateX(length, wallWidth, startSide, index) {
+    if (startSide === 'left') {
+        return 0;
+    } else if (startSide === 'right') {
+        return wallWidth - length;
+    } else {
+        // Alternées
+        return index % 2 === 0 ? 0 : wallWidth - length;
+    }
+}
 
 function generateSlats(config) {
     const slats = [];
@@ -102,50 +125,77 @@ function generateSlats(config) {
     const usedHeight = numSlats * totalSlatHeight - layout.gap;
     const verticalMargin = (wall.height - usedHeight) / 2;
     const maxSlatLength = (wall.width * layout.maxLengthPercent) / 100;
+    const tolerance = layout.tolerance || 0;
 
     for (let i = 0; i < numSlats; i++) {
         const y = verticalMargin + i * totalSlatHeight;
-        let length, x;
+        const progress = i / (numSlats - 1 || 1); // 0 à 1
+        const centerDistance = Math.abs(progress - 0.5) * 2; // 0 au centre, 1 aux extrémités
+        let baseLength, length, x;
 
         switch (layout.pattern) {
-            case 'staggered':
-                const wavePosition = Math.sin((i / numSlats) * Math.PI * 2) * 0.3 + 0.5;
-                const variation = (Math.random() - 0.5) * 0.2;
-                length = layout.minLength + (maxSlatLength - layout.minLength) * (wavePosition + variation);
-                length = Math.max(layout.minLength, Math.min(maxSlatLength, length));
-                if (layout.startSide === 'left') {
-                    x = 0;
-                } else if (layout.startSide === 'right') {
-                    x = wall.width - length;
-                } else {
-                    x = i % 2 === 0 ? 0 : wall.width - length;
-                }
+            case 'wave':
+                // Vague sinusoïdale
+                const waveValue = Math.sin(progress * Math.PI * 2) * 0.5 + 0.5;
+                baseLength = layout.minLength + (maxSlatLength - layout.minLength) * waveValue;
+                length = applyTolerance(baseLength, layout.minLength, maxSlatLength, tolerance);
+                x = calculateX(length, wall.width, layout.startSide, i);
                 break;
 
             case 'centered':
-                const centerProgress = Math.abs((i - numSlats / 2) / (numSlats / 2));
-                length = maxSlatLength - (maxSlatLength - layout.minLength) * centerProgress;
+                // Losange - plus long au centre
+                baseLength = layout.minLength + (maxSlatLength - layout.minLength) * (1 - centerDistance);
+                length = applyTolerance(baseLength, layout.minLength, maxSlatLength, tolerance);
                 x = (wall.width - length) / 2;
                 break;
 
             case 'diagonal':
-                const diagProgress = i / numSlats;
-                length = layout.minLength + (maxSlatLength - layout.minLength) * diagProgress;
-                if (layout.startSide === 'right') {
-                    x = wall.width - length;
-                } else {
-                    x = 0;
-                }
+                // Progression linéaire
+                baseLength = layout.minLength + (maxSlatLength - layout.minLength) * progress;
+                length = applyTolerance(baseLength, layout.minLength, maxSlatLength, tolerance);
+                x = calculateX(length, wall.width, layout.startSide, i);
+                break;
+
+            case 'pyramid':
+                // Pyramide - court aux extrémités, long au centre (aligné à gauche ou droite)
+                baseLength = layout.minLength + (maxSlatLength - layout.minLength) * (1 - centerDistance);
+                length = applyTolerance(baseLength, layout.minLength, maxSlatLength, tolerance);
+                x = calculateX(length, wall.width, layout.startSide, i);
+                break;
+
+            case 'heartbeat':
+                // Battement - pics réguliers
+                const heartbeat = Math.abs(Math.sin(progress * Math.PI * 4));
+                baseLength = layout.minLength + (maxSlatLength - layout.minLength) * heartbeat;
+                length = applyTolerance(baseLength, layout.minLength, maxSlatLength, tolerance);
+                x = calculateX(length, wall.width, layout.startSide, i);
+                break;
+
+            case 'cascade':
+                // Cascade - vagues décroissantes
+                const cascade = Math.sin(progress * Math.PI * 3) * (1 - progress * 0.5);
+                const cascadeNorm = (cascade + 1) / 2;
+                baseLength = layout.minLength + (maxSlatLength - layout.minLength) * cascadeNorm;
+                length = applyTolerance(baseLength, layout.minLength, maxSlatLength, tolerance);
+                x = calculateX(length, wall.width, layout.startSide, i);
+                break;
+
+            case 'uniform':
+                // Toutes les lames de même longueur
+                baseLength = (layout.minLength + maxSlatLength) / 2;
+                length = applyTolerance(baseLength, layout.minLength, maxSlatLength, tolerance);
+                x = calculateX(length, wall.width, layout.startSide, i);
                 break;
 
             case 'random':
-                length = layout.minLength + Math.random() * (maxSlatLength - layout.minLength);
-                if (layout.startSide === 'left') {
-                    x = 0;
-                } else if (layout.startSide === 'right') {
-                    x = wall.width - length;
-                } else {
+            default:
+                // Complètement aléatoire (tolérance agit comme un multiplicateur)
+                const randomBase = layout.minLength + (maxSlatLength - layout.minLength) * 0.5;
+                length = applyTolerance(randomBase, layout.minLength, maxSlatLength, Math.max(tolerance, 0.5));
+                if (layout.startSide === 'both') {
                     x = Math.random() > 0.5 ? 0 : wall.width - length;
+                } else {
+                    x = calculateX(length, wall.width, layout.startSide, i);
                 }
                 break;
         }
@@ -802,8 +852,16 @@ elements.wallColorHex.addEventListener('input', (e) => {
     }
 });
 
+// Slider tolérance - affichage en temps réel
+const toleranceSlider = document.getElementById('tolerance');
+const toleranceValue = document.getElementById('toleranceValue');
+toleranceSlider.addEventListener('input', (e) => {
+    toleranceValue.textContent = e.target.value + '%';
+});
+toleranceSlider.addEventListener('change', generate);
+
 // Mise à jour en temps réel
-document.querySelectorAll('input, select').forEach(input => {
+document.querySelectorAll('input:not(#tolerance), select').forEach(input => {
     input.addEventListener('change', generate);
 });
 

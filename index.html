@@ -187,10 +187,14 @@
                         <div>
                             <label class="block text-xs text-wood-500 mb-1">Motif</label>
                             <select id="pattern" class="w-full px-3 py-2 rounded-lg border border-wood-200 focus:border-wood-500 focus:ring-2 focus:ring-wood-200 outline-none transition-all text-sm bg-white">
-                                <option value="staggered">Décalé (vague)</option>
-                                <option value="centered">Centré symétrique</option>
-                                <option value="diagonal">Diagonal</option>
-                                <option value="random">Aléatoire</option>
+                                <option value="wave">🌊 Vague</option>
+                                <option value="centered">◇ Centré (losange)</option>
+                                <option value="diagonal">↗ Diagonal</option>
+                                <option value="pyramid">△ Pyramide</option>
+                                <option value="heartbeat">💓 Battement</option>
+                                <option value="cascade">🌀 Cascade</option>
+                                <option value="uniform">▬ Uniforme</option>
+                                <option value="random">🎲 Aléatoire</option>
                             </select>
                         </div>
                         <div class="grid grid-cols-2 gap-3">
@@ -210,6 +214,14 @@
                                 <option value="right">Depuis la droite</option>
                                 <option value="both">Alternées</option>
                             </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-wood-500 mb-1">Variation aléatoire</label>
+                            <div class="flex items-center gap-3">
+                                <input type="range" id="tolerance" value="20" min="0" max="100" class="flex-1 h-2 bg-wood-200 rounded-lg appearance-none cursor-pointer accent-wood-600">
+                                <span id="toleranceValue" class="text-sm font-medium text-wood-700 w-10 text-right">20%</span>
+                            </div>
+                            <p class="text-xs text-wood-400 mt-1">0% = régulier, 100% = très varié</p>
                         </div>
                     </div>
                 </div>

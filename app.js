@@ -552,8 +552,11 @@ async function exportPDF() {
     const pdfBlob = pdf.output('blob');
     const fileName = `wood-wall-design-${Date.now()}.pdf`;
 
-    // Vérifier si Web Share API est disponible (iOS Safari, Android)
-    if (navigator.canShare && navigator.canShare({ files: [new File([pdfBlob], fileName, { type: 'application/pdf' })] })) {
+    // Détecter si on est sur mobile (iOS/Android)
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    // Utiliser Web Share uniquement sur mobile
+    if (isMobile && navigator.canShare && navigator.canShare({ files: [new File([pdfBlob], fileName, { type: 'application/pdf' })] })) {
         try {
             const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
             await navigator.share({
@@ -569,7 +572,7 @@ async function exportPDF() {
             }
         }
     } else {
-        // Fallback pour desktop et navigateurs sans Web Share
+        // Téléchargement direct sur desktop
         fallbackDownload(pdfBlob, fileName);
     }
 }

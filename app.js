@@ -413,7 +413,7 @@ function displayMaterialsSummary(config, slats) {
                     <span class="w-6 h-6 rounded bg-wood-100 flex items-center justify-center text-xs">🪚</span>
                     Plan de coupe optimisé
                 </h3>
-                <div class="space-y-2 max-h-64 overflow-y-auto pr-2">
+                <div class="space-y-2">
                     ${bins.map((bin, index) => `
                         <div class="bg-wood-50 rounded-lg px-4 py-3">
                             <div class="flex items-center justify-between mb-1">
